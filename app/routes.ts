@@ -3,5 +3,6 @@ import { Route } from "react-router";
 
 export default [
     index("routes/home.tsx"),
-    route("/login", "routes/login.tsx")
+    route("/login", "routes/login.tsx"),
+    route("/dashboard", "routes/dashboard.tsx"),
 ] satisfies RouteConfig;

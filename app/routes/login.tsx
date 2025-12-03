@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Github, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -10,9 +12,49 @@ export default function LoginPage() {
     password: '',
     name: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = () => {
-    console.log(isLogin ? 'Login' : 'Signup', formData);
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
+      const url = `${BACKEND_URL}${endpoint}`;
+
+      // for login we just need username + password
+      const payload = isLogin
+        ? { username: formData.username || formData.email, password: formData.password }
+        : {
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            name: formData.name
+          };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // important for cookies
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong');
+        return;
+      }
+
+      // success → redirect to dashboard or home
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error(err);
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -23,6 +65,10 @@ export default function LoginPage() {
     if (e.key === 'Enter') {
       handleSubmit();
     }
+  };
+
+  const handleGithubLogin = () => {
+    window.location.href = `${BACKEND_URL}/auth/github`;
   };
 
   return (
@@ -79,7 +125,7 @@ export default function LoginPage() {
             {/* Toggle Buttons with better design */}
             <div className="flex mb-8 p-1.5 bg-white/5 rounded-2xl border border-white/10">
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => { setIsLogin(true); setError(''); }}
                 className={`flex-1 py-3 text-xs font-semibold transition-all duration-500 rounded-xl ${
                   isLogin 
                     ? 'bg-gradient-to-r from-white to-gray-100 text-black shadow-lg shadow-white/20 scale-105' 
@@ -90,7 +136,7 @@ export default function LoginPage() {
                 LOGIN
               </button>
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => { setIsLogin(false); setError(''); }}
                 className={`flex-1 py-3 text-xs font-semibold transition-all duration-500 rounded-xl ${
                   !isLogin 
                     ? 'bg-gradient-to-r from-white to-gray-100 text-black shadow-lg shadow-white/20 scale-105' 
@@ -104,7 +150,10 @@ export default function LoginPage() {
 
             {/* OAuth Buttons with colored icons */}
             <div className="space-y-3 mb-8">
-              <button className="w-full py-3.5 border border-white/20 rounded-2xl text-white text-xs font-medium hover:bg-white/5 hover:border-white/40 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden">
+              <button
+                className="w-full py-3.5 border border-white/20 rounded-2xl text-white text-xs font-medium hover:bg-white/5 hover:border-white/40 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden"
+                type="button"
+              >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <svg className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -115,7 +164,11 @@ export default function LoginPage() {
                 <span className="relative z-10">Continue with Google</span>
               </button>
               
-              <button className="w-full py-3.5 border border-white/20 rounded-2xl text-white text-xs font-medium hover:bg-white/5 hover:border-white/40 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden">
+              <button
+                className="w-full py-3.5 border border-white/20 rounded-2xl text-white text-xs font-medium hover:bg-white/5 hover:border-white/40 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden"
+                type="button"
+                onClick={handleGithubLogin}
+              >
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform relative z-10">
                   <Github className="w-3 h-3 text-white" />
@@ -133,6 +186,13 @@ export default function LoginPage() {
                 <span className="bg-gradient-to-br from-white/[0.07] to-white/[0.02] px-4 text-gray-500 tracking-wider">Or continue with</span>
               </div>
             </div>
+
+            {/* Error */}
+            {error && (
+              <p className="text-xs text-red-400 mb-4">
+                {error}
+              </p>
+            )}
 
             {/* Input Fields with icons */}
             <div className="space-y-5">
@@ -214,6 +274,7 @@ export default function LoginPage() {
                     style={{fontFamily: 'Ubuntu, sans-serif'}}
                   />
                   <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                   >
@@ -231,11 +292,15 @@ export default function LoginPage() {
               )}
 
               <button
+                type="button"
                 onClick={handleSubmit}
-                className="w-full bg-gradient-to-r from-white to-gray-100 text-black py-4 rounded-2xl text-xs font-bold uppercase tracking-wider hover:shadow-2xl hover:shadow-white/30 transition-all duration-300 hover:scale-[1.02] mt-6 relative overflow-hidden group"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-white to-gray-100 text-black py-4 rounded-2xl text-xs font-bold uppercase tracking-wider hover:shadow-2xl hover:shadow-white/30 transition-all duration-300 hover:scale-[1.02] mt-6 relative overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{fontFamily: 'Ubuntu, sans-serif'}}
               >
-                <span className="relative z-10">{isLogin ? 'Sign In' : 'Create Account'}</span>
+                <span className="relative z-10">
+                  {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+                </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
